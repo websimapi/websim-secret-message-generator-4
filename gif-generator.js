@@ -1,3 +1,31 @@
+// Create a blob URL for the GIF worker to avoid MIME type issues.
+let gifWorkerURL = null;
+
+async function getGifWorkerURL(statusEl) {
+    if (gifWorkerURL) {
+        return gifWorkerURL;
+    }
+    try {
+        statusEl.textContent = 'Loading GIF engine...';
+        const response = await fetch('./gif.worker.js');
+        if (!response.ok) {
+            throw new Error(`Failed to fetch worker: ${response.statusText}`);
+        }
+        const workerScript = await response.text();
+        // The script might be empty if there was an issue, check for that.
+        if (!workerScript.trim()) {
+            throw new Error('GIF worker script is empty.');
+        }
+        const blob = new Blob([workerScript], { type: 'application/javascript' });
+        gifWorkerURL = URL.createObjectURL(blob);
+        return gifWorkerURL;
+    } catch (e) {
+        console.error("Error loading gif.worker.js:", e);
+        statusEl.textContent = 'Error: Could not load GIF engine.';
+        throw e;
+    }
+}
+
 export class GifGenerator {
     constructor(frameManager, outputContainer, noiseCanvas, controls, statusEl) {
         this.frameManager = frameManager;
@@ -22,12 +50,14 @@ export class GifGenerator {
         const fps = parseInt(this.controls.gifFps.value, 10);
         const delay = 1000 / fps;
 
+        const workerScriptPath = await getGifWorkerURL(this.statusEl);
+
         const gif = new GIF({
             workers: 2,
             quality: 10,
             width: Math.floor(width),
             height: Math.floor(height),
-            workerScript: './gif.worker.js'
+            workerScript: workerScriptPath
         });
 
         // Create a temporary container for capturing frames
