@@ -26,7 +26,8 @@ export class GifGenerator {
             workers: 2,
             quality: 10,
             width: Math.floor(width),
-            height: Math.floor(height)
+            height: Math.floor(height),
+            workerScript: './gif.worker.js'
         });
 
         // Create a temporary container for capturing frames
